@@ -25,4 +25,4 @@ def read_flight(flight_id: int, db: Session = Depends(get_db)):
     flight = db.query(models.Flight).filter(models.Flight.flight_id == flight_id).first()
     if flight is None:
         raise HTTPException(status_code=404, detail="Flight not found")
-    return {"flight_id": flight.flight_id, "flight_name": flight.flight_name}
+    return flight.__dict__
