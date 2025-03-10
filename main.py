@@ -6,7 +6,7 @@ from database import init_db
 app = FastAPI()
 
 @app.on_event("startup")
-def on_startup():
+async def on_startup():
     init_db()
 
 # Feature flag for flights API
