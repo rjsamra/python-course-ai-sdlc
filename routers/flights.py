@@ -18,7 +18,7 @@ def get_db():
 @router.get("/")
 def read_flights(skip: int = 0, limit: int = 10, db: Session = Depends(get_db)):
     flights = db.query(models.Flight).offset(skip).limit(limit).all()
-    return [{"flight_id": flight.flight_id, "flight_name": flight.flight_name} for flight in flights]
+    return [flights]
 
 @router.get("/{flight_id}")
 def read_flight(flight_id: int, db: Session = Depends(get_db)):

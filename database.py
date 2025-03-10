@@ -1,3 +1,4 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -13,7 +14,13 @@ Base = declarative_base()
 
 def init_db():
     import models
-    Base.metadata.create_all(bind=engine)
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"Error initializing database: {e}")
+        if "file is not a database" in str(e) or "no such column" in str(e):
+            os.remove("flights.db")
+            Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     # Insert dummy data
     if not db.query(models.Flight).first():
