@@ -1,3 +1,4 @@
+import os
 from fastapi import FastAPI
 from routers import flights
 from database import init_db
@@ -8,7 +9,9 @@ app = FastAPI()
 def on_startup():
     init_db()
 
-app.include_router(flights.router)
+# Feature flag for flights API
+if os.getenv("ENABLE_FLIGHTS_API", "true").lower() == "true":
+    app.include_router(flights.router)
 
 @app.get("/")
 def read_root():
