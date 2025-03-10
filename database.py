@@ -26,7 +26,6 @@ def init_db():
         dummy_flights = [
             models.Flight(
                 flight_id=1,
-                flight_no="AA123",
                 flight_name="{{indigo}}",  # New field
                 scheduled_departure=datetime(2023, 10, 1, 8, 0, 0),
                 scheduled_arrival=datetime(2023, 10, 1, 12, 0, 0),
@@ -39,7 +38,6 @@ def init_db():
             ),
             models.Flight(
                 flight_id=2,
-                flight_no="BA456",
                 flight_name="{{indigo}}",  # New field
                 scheduled_departure=datetime(2023, 10, 2, 9, 0, 0),
                 scheduled_arrival=datetime(2023, 10, 2, 13, 0, 0),
