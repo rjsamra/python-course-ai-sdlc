@@ -1,6 +1,6 @@
+import os
 from sqlalchemy import create_engine
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
+from sqlalchemy.orm import sessionmaker, declarative_base
 from datetime import datetime
 
 SQLALCHEMY_DATABASE_URL = "sqlite:///./flights.db"
@@ -13,14 +13,20 @@ Base = declarative_base()
 
 def init_db():
     import models
-    Base.metadata.create_all(bind=engine)
+    try:
+        Base.metadata.create_all(bind=engine)
+    except Exception as e:
+        print(f"Error initializing database: {e}")
+        if "file is not a database" in str(e) or "no such column" in str(e):
+            os.remove("flights.db")
+            Base.metadata.create_all(bind=engine)
     db = SessionLocal()
     # Insert dummy data
     if not db.query(models.Flight).first():
         dummy_flights = [
             models.Flight(
                 flight_id=1,
-                flight_no="AA123",
+                flight_name="{{indigo}}",  # New field
                 scheduled_departure=datetime(2023, 10, 1, 8, 0, 0),
                 scheduled_arrival=datetime(2023, 10, 1, 12, 0, 0),
                 departure_airport="JFK",
@@ -32,7 +38,7 @@ def init_db():
             ),
             models.Flight(
                 flight_id=2,
-                flight_no="BA456",
+                flight_name="{{indigo}}",  # New field
                 scheduled_departure=datetime(2023, 10, 2, 9, 0, 0),
                 scheduled_arrival=datetime(2023, 10, 2, 13, 0, 0),
                 departure_airport="LHR",

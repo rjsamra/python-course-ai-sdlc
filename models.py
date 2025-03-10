@@ -5,7 +5,7 @@ class Flight(Base):
     __tablename__ = "flights"
 
     flight_id = Column(Integer, primary_key=True, index=True)
-    flight_no = Column(String, index=True)
+    flight_name = Column(String, index=True)  # New field
     scheduled_departure = Column(TIMESTAMP, index=True)
     scheduled_arrival = Column(TIMESTAMP, index=True)
     departure_airport = Column(String, index=True)
