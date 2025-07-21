@@ -1,0 +1,167 @@
+name: Flights API CI
+
+on:
+  push:
+    branches: [main, feature/**]
+  pull_request:
+    branches: [main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.11", "3.12"]
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v4
+      with:
+        python-version: ${{ matrix.python-version }}
+        
+    - name: Cache pip dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.cache/pip
+        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+        restore-keys: |
+          ${{ runner.os }}-pip-
+          
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        
+    - name: Set up SQLite database
+      run: |
+        # SQLite is pre-installed on GitHub Actions runners
+        # Initialize the database
+        python -c "from database import init_db; init_db()"
+        
+    - name: Run tests with pytest
+      run: |
+        pytest -v --tb=short
+        
+    - name: Run tests with coverage
+      run: |
+        pip install pytest-cov
+        pytest --cov=. --cov-report=xml --cov-report=term-missing --cov-fail-under=80
+        
+    - name: Upload coverage reports
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./coverage.xml
+        flags: unittests
+        name: codecov-umbrella
+        fail_ci_if_error: false
+      continue-on-error: true
+
+  lint:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+        
+    - name: Install linting dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install flake8 black isort
+        
+    - name: Run Black code formatter check
+      run: |
+        black --check --diff .
+      continue-on-error: true
+        
+    - name: Run isort import sorting check
+      run: |
+        isort --check-only --diff .
+      continue-on-error: true
+        
+    - name: Run flake8 linting
+      run: |
+        # Stop the build if there are Python syntax errors or undefined names
+        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+        # Exit-zero treats all errors as warnings
+        flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+
+  security-scan:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+        
+    - name: Install security scanning tools
+      run: |
+        python -m pip install --upgrade pip
+        pip install safety bandit
+        
+    - name: Run safety check for known security vulnerabilities
+      run: |
+        safety check --json --output safety-report.json
+      continue-on-error: true
+        
+    - name: Run bandit security linter
+      run: |
+        bandit -r . -f json -o bandit-report.json
+      continue-on-error: true
+
+  integration-test:
+    runs-on: ubuntu-latest
+    needs: test
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: "3.10"
+        
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+        pip install httpx
+        
+    - name: Initialize database
+      run: |
+        python -c "from database import init_db; init_db()"
+        
+    - name: Start FastAPI application in background
+      run: |
+        uvicorn main:app --host 0.0.0.0 --port 8000 &
+        sleep 10
+        
+    - name: Wait for application to be ready
+      run: |
+        for i in {1..30}; do
+          if curl -f http://localhost:8000/ > /dev/null 2>&1; then
+            echo "Application is ready"
+            break
+          fi
+          echo "Waiting for application to start... ($i/30)"
+          sleep 2
+        done
+        
+    - name: Run integration tests
+      run: |
+        curl -f http://localhost:8000/ | grep "Welcome to the Flight API"
+        curl -f http://localhost:8000/flights/ | grep "AA123"
+        curl -f http://localhost:8000/flights/1 | grep "AA123"
